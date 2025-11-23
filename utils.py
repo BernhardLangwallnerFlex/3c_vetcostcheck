@@ -7,6 +7,17 @@ import tempfile
 import csv
 from PIL import Image
 
+
+def ensure_json_serializable(obj):
+    try:
+        json.dumps(obj)
+        return obj
+    except TypeError:
+        # Fix common issues
+        if hasattr(obj, "model_dump"):
+            return obj.model_dump()
+        raise
+
 # Extract the JSON content from the response
 def extract_json_from_response(text):
     # Remove Markdown code block if present

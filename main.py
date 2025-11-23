@@ -3,14 +3,10 @@ from ocr.ocr_tesseract import TesseractOCR
 from ocr.ocr_mistral import MistralOCR
 from ocr.ocr_googlevision import GoogleOCR
 from ocr.ocr_agentic import OCRAgenticProcessor
-from processors.agentic_processor import AgenticDocInvoiceProcessor
 from invoice import Invoice
-from utils import dict_of_dicts_to_csv
 from dotenv import load_dotenv
 import os
-import json
 from pathlib import Path
-from prompt_building.prompt_building import get_full_prompt
 # Load API key from .env
 load_dotenv()
 
@@ -20,7 +16,7 @@ output_folder = "3C_testdaten_json/"
 # get list of image files (.jpg, .jpeg, .png) in input_folder
 files = [f for f in os.listdir(input_folder) if f.lower().endswith(('.pdf'))]
 files.sort()
-file = "230041495V_Splitt.pdf"
+file = "230072869L_Splitt.pdf"
 file_string = file.split(".")[0]
 file_path = input_folder + file
 
@@ -46,41 +42,5 @@ processor = GPTInvoiceProcessor(
 )
 
 invoice.extract_data_from_subdocuments(processor)
-
-
-
-
-
-
-
-exit()
-
-########################################################
-
-exit()
-results_dict = {
-    "gpt_ocr_google": result_gpt_ocr_google
-}
-dict_of_dicts_to_csv(results_dict, "results.csv")
-
-exit()
-
-
-agentic_processor = AgenticDocInvoiceProcessor(
-    model_id="dpt-2-latest"
-)
-
-
-# OCR + text pipeline
-result_extraction_dict, parse_result_markdown = agentic_processor.extract(prompt, file_path)
-#print("Text mode result:\n", result_text)
-#print("Extraction result:\n", result_extraction)
-print(result_extraction_dict)
-
-
-
-
-exit()
-
-result_text = agentic_processor.extract_from_file_direct(prompt, file_path)
-print("Vision only mode result:\n", result_text)
+print(invoice.extraction_result_json)
+print(type(invoice.extraction_result_json))

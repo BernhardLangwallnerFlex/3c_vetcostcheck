@@ -102,7 +102,8 @@ class Invoice():
 
     def extract_data_from_subdocuments(self, processor):
         extraction_dicts = []
-        for subdocument in self.subdocuments:
+        extraction_result_json = {'number_of_subdocuments': len(self.subdocuments)}
+        for i, subdocument in enumerate(self.subdocuments):
             extraction_dict = processor.extract(
                                                 subdocument["image_filename"],
                                                 use_ocr=True,
@@ -111,9 +112,10 @@ class Invoice():
                                                 prompt=get_full_prompt(ocr_text=subdocument["markdown"], animal_information=self.analysis_dict["animals"]),
                                                 animal_information=self.analysis_dict["animals"])
             extraction_dicts.append(extraction_dict)
+        
             #print(extraction_dict)
-
-        self.extraction_dict_by_subdocument = extraction_dicts
+        extraction_result_json['subdocuments'] = extraction_dicts
+        self.extraction_result_json = extraction_result_json
 
         # save extracted_data to json file with indent 4
         with open(f'extracted_data_{self.filename.stem}.json', 'w+') as f:

@@ -1,0 +1,26 @@
+version: "3.9"
+services:
+  api:
+    build: .
+    container_name: invoice_api
+    ports:
+      - "8000:8000"
+    depends_on:
+      - redis
+    volumes:
+      - .:/app
+
+  worker:
+    build: .
+    container_name: invoice_worker
+    command: python jobs/worker.py
+    depends_on:
+      - redis
+    volumes:
+      - .:/app
+
+  redis:
+    image: redis:7
+    container_name: invoice_redis
+    ports:
+      - "6379:6379"

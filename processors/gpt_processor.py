@@ -23,8 +23,6 @@ class GPTInvoiceProcessor:
         if prompt == "":
             prompt = build_prompt_from_config("configs/extraction_config.json", use_ocr=use_ocr, use_vision=use_vision, ocr_text=markdown_text, animal_information=animal_information)
 
-        print(prompt)
-        #print(full_prompt)
         content_blocks = [{"type": "text", "text": prompt}]
 
         if use_vision:
