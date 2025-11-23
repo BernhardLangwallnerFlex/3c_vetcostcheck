@@ -4,47 +4,56 @@ from ocr.ocr_mistral import MistralOCR
 from ocr.ocr_googlevision import GoogleOCR
 from ocr.ocr_agentic import OCRAgenticProcessor
 from processors.agentic_processor import AgenticDocInvoiceProcessor
+from invoice import Invoice
 from utils import dict_of_dicts_to_csv
 from dotenv import load_dotenv
 import os
 import json
+from pathlib import Path
+from prompt_building.prompt_building import get_full_prompt
 # Load API key from .env
 load_dotenv()
 
-input_folder = "3C_testdaten_jpg/"
+input_folder = "3C_testdaten_pdf/"
 output_folder = "3C_testdaten_json/"
 
 # get list of image files (.jpg, .jpeg, .png) in input_folder
-files = [f for f in os.listdir(input_folder) if f.lower().endswith(('.jpg', '.jpeg', '.png'))]
+files = [f for f in os.listdir(input_folder) if f.lower().endswith(('.pdf'))]
 files.sort()
-file = files[6]
+file = "230041495V_Splitt.pdf"
 file_string = file.split(".")[0]
 file_path = input_folder + file
 
 
 # initialize OCR engines
 #google_ocr_engine = GoogleOCR()
-agentic_ocr_engine = OCRAgenticProcessor()
-mistral_ocr_engine = MistralOCR()
-tesseract_ocr_engine = TesseractOCR()
+agentic_ocr_engine = OCRAgenticProcessor(name = "agentic_ocr")
+# mistral_ocr_engine = MistralOCR()
+
+invoice = Invoice(filename=Path(file_path), ocr_engine=agentic_ocr_engine)
+
+invoice.extract_markdown()
+invoice.analyze_document()
+print(invoice.analysis_dict)
+invoice.split_document_into_invoices()
 
 # initialize GPT processor
 processor = GPTInvoiceProcessor(
+    name="gpt_processor",
     api_key=os.getenv("OPENAI_API_KEY"),
     model="gpt-4",
-    vision_model="gpt-4o",  # or "gpt-4.1", or whatever OpenAI supports for vision in your account
-    ocr_engine=agentic_ocr_engine
+    vision_model="gpt-4o"  # or "gpt-4.1", or whatever OpenAI supports for vision in your account
 )
 
-# extract data from file
-result_mistral_ocr = processor.extract(file_path, use_ocr=True, use_vision=True)
+invoice.extract_data_from_subdocuments(processor)
 
-# save result to json file
-with open(output_folder+file_string+"mistral.json", "w") as f:
-    json.dump(result_mistral_ocr, f, indent=4)
 
-print(result_mistral_ocr)
 
+
+
+
+
+exit()
 
 ########################################################
 

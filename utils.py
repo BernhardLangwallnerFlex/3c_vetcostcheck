@@ -2,12 +2,10 @@ import base64
 from PIL import Image
 import re
 import json 
-import pytesseract
 import fitz  # PyMuPDF
 import tempfile
-import os
 import csv
-import pandas as pd
+from PIL import Image
 
 # Extract the JSON content from the response
 def extract_json_from_response(text):
@@ -82,36 +80,7 @@ def resize_image_by_height(image_path, target_height=200):
     
     return resized_img
 
-
-def extract_text_from_file(file_path: str) -> str:
-    if file_path.lower().endswith((".jpg", ".jpeg", ".png")):
-        image = Image.open(file_path)
-        ocr_result = pytesseract.image_to_string(image)
-        print(ocr_result)
-        return ocr_result
-
-    elif file_path.lower().endswith(".pdf"):
-        text = ""
-        with fitz.open(file_path) as doc:
-            for page in doc:
-                image = page.get_pixmap(dpi=300)
-                with tempfile.NamedTemporaryFile(suffix=".png", delete=False) as tmp_img:
-                    image.save(tmp_img.name)
-                    page_text = pytesseract.image_to_string(Image.open(tmp_img.name))
-                    text += f"\n\n--- PAGE {page.number + 1} ---\n\n" + page_text
-                    os.remove(tmp_img.name)
-        return text
-
-    else:
-        raise ValueError("Unsupported file format")
-
-
 def convert_file_to_images(file_path: str) -> list:
-    from PIL import Image
-    import fitz
-    import tempfile
-    import os
-
     images = []
 
     if file_path.lower().endswith((".jpg", ".jpeg", ".png")):

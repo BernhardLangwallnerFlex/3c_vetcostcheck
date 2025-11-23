@@ -1,42 +1,34 @@
 from openai import OpenAI
-from utils import convert_file_to_images, extract_text_from_file
+from utils import convert_file_to_images, extract_json_from_response
 import base64
-from prompt_building import build_prompt_from_config
+from prompt_building.prompt_building import build_prompt_from_config
 import json
 import re
 
 
 class GPTInvoiceProcessor:
-    def __init__(self, model="gpt-4", vision_model=None, api_key=None, ocr_engine=None):
-        self.client = OpenAI(api_key=api_key)
+    def __init__(self, model="gpt-4", name="gpt_processor", vision_model=None, api_key=None, ocr_engine=None):
+        self.client = OpenAI(api_key=api_key)   
         self.model = model
+        self.name = name
         self.vision_model = vision_model
-        self.ocr_engine = ocr_engine  # should be a BaseOCREngine instance
 
 
-    def extract(self, file_path: str, use_ocr=True, use_vision=True) -> str:
-        if use_ocr and not self.ocr_engine:
-            raise ValueError("No OCR engine provided for text extraction.")
+    def extract(self, img_file_path: str, use_ocr=True, use_vision=True, markdown_text="", prompt="", animal_information={}) -> str:
+        if use_ocr and markdown_text == "":
+            raise ValueError("Not enough markdown text information to extract data from document.")
         if use_vision and not self.vision_model:
             raise ValueError("No vision model configured")
 
-        # if OCR engine is a list, extract text from each engine
-        if use_ocr:
-            if isinstance(self.ocr_engine, list):
-                ocr_text = "\n\n---\n\n".join([engine.extract_text(file_path) for engine in self.ocr_engine])
-            else:
-                ocr_text = self.ocr_engine.extract_text(file_path)
-        else:
-            ocr_text = ""
+        if prompt == "":
+            prompt = build_prompt_from_config("configs/extraction_config.json", use_ocr=use_ocr, use_vision=use_vision, ocr_text=markdown_text, animal_information=animal_information)
 
-
-        prompt = build_prompt_from_config("configs/extraction_config.json", use_ocr=True, use_vision=True, ocr_text=ocr_text)
-
+        print(prompt)
         #print(full_prompt)
         content_blocks = [{"type": "text", "text": prompt}]
 
         if use_vision:
-            images = convert_file_to_images(file_path)      
+            images = convert_file_to_images(img_file_path)      
             for img_path in images:
                 with open(img_path, "rb") as f:
                     b64 = base64.b64encode(f.read()).decode("utf-8")
@@ -58,18 +50,14 @@ class GPTInvoiceProcessor:
         usage = response.usage
         prompt_tokens = usage.prompt_tokens
         completion_tokens = usage.completion_tokens
-        total_tokens = usage.total_tokens
+        # total_tokens = usage.total_tokens
 
         # Model-specific pricing (USD per 1K tokens)
         PROMPT_RATE = 0.00015
         COMPLETION_RATE = 0.0006
         cost = (prompt_tokens / 1000 * PROMPT_RATE) + (completion_tokens / 1000 * COMPLETION_RATE)
-        print(f"Cost of this call: ${cost:.6f}")
+        #print(f"Cost of this call: ${cost:.6f}")
 
         #result = response.choices[0].message.content
-        clean = re.sub(r"^```json|^'''json|```$|'''$", "", response.choices[0].message.content.strip(), flags=re.MULTILINE).strip()
-    
-
-        result = json.loads(clean)
-
-        return result
+        json_result = extract_json_from_response(response.choices[0].message.content)
+        return json_result
