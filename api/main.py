@@ -1,8 +1,10 @@
-from fastapi import FastAPI
+from fastapi import FastAPI, Depends
 from api.routes import upload, process, job
+from api.dependencies import verify_api_key
 
 app = FastAPI(title="Invoice Extraction API")
 
-app.include_router(upload.router)
-app.include_router(process.router)
-app.include_router(job.router)
+# Apply to all routers
+app.include_router(upload.router, dependencies=[Depends(verify_api_key)])
+app.include_router(process.router, dependencies=[Depends(verify_api_key)])
+app.include_router(job.router, dependencies=[Depends(verify_api_key)])

@@ -5,3 +5,5 @@ FILES_DIR = os.path.join(BASE_DIR, "files")
 os.makedirs(FILES_DIR, exist_ok=True)
 
 REDIS_URL = os.getenv("REDIS_URL", "redis://redis:6379/0")
+
+API_KEY = os.getenv("INVOICE_API_KEY", "changeme123")

@@ -3,7 +3,6 @@ from redis import Redis
 from rq.job import Job
 from config import REDIS_URL
 from api.models import JobStatusResponse
-from pathlib import Path
 
 
 router = APIRouter()

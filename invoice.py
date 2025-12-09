@@ -119,7 +119,7 @@ class Invoice():
 
         # save extracted_data to json file with indent 4
         with open(f'extracted_data_{self.filename.stem}.json', 'w+') as f:
-            json.dump(extraction_dicts, f, indent=4)
+            json.dump(extraction_result_json, f, indent=4)
     
 
     def cleanup_temporary_files(self):

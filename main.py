@@ -16,7 +16,7 @@ output_folder = "3C_testdaten_json/"
 # get list of image files (.jpg, .jpeg, .png) in input_folder
 files = [f for f in os.listdir(input_folder) if f.lower().endswith(('.pdf'))]
 files.sort()
-file = "230072869L_Splitt.pdf"
+file = "230041495V_Splitt.pdf"
 file_string = file.split(".")[0]
 file_path = input_folder + file
 
