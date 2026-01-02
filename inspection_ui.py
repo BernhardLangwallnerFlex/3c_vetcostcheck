@@ -1,121 +1,199 @@
-import streamlit as st
+from __future__ import annotations
+
+from dataclasses import dataclass
+from pathlib import Path
 import os
 import json
+import tempfile
+import fitz
 from PIL import Image
-import glob
+from dotenv import load_dotenv
+from openai import OpenAI
 
-def get_file_list(directory, extension):
-    """Get list of files with specific extension from directory"""
-    if not os.path.exists(directory):
-        return []
-    
-    pattern = os.path.join(directory, f"*.{extension}")
-    files = glob.glob(pattern)
-    return [os.path.basename(f) for f in sorted(files)]
+from ocr.base_ocr import BaseOCREngine
+from utils import extract_json_from_response
+from prompt_building.prompt_building import build_prompt_for_analyze_document, get_full_prompt
 
-def load_json_file(json_path):
-    """Load and return JSON content"""
-    try:
-        with open(json_path, 'r', encoding='utf-8') as f:
-            return json.load(f)
-    except Exception as e:
-        st.error(f"Error loading JSON file: {str(e)}")
-        return None
+from storage import StorageBackend, LocalStorage, StorageKey
 
-def main():
-    st.set_page_config(
-        page_title="Info-Extraction Tierarzt-Rechnungen",
-        page_icon="🐕",
-        layout="wide"
-    )
-    
-    # Header
-    st.title("🐕 Info-Extraction Tierarzt-Rechnungen")
-    st.markdown("---")
-    
-    # Create two columns for dropdowns
-    col1, col2 = st.columns(2)
-    
-    with col1:
-        st.subheader("📷 Select Image")
-        image_dir = "3C_testdaten_jpg"
-        image_files = get_file_list(image_dir, "jpg")
-        
-        if not image_files:
-            st.warning(f"No JPG files found in {image_dir}")
-            selected_image = None
+load_dotenv()
+
+
+@dataclass
+class SubdocumentArtifact:
+    document_number: int
+    page_numbers: list[int]
+    markdown: str
+
+    # storage keys (could be local paths or s3://...)
+    md_key: StorageKey
+    pdf_key: StorageKey
+    image_key: StorageKey
+
+
+class Invoice:
+    def __init__(
+        self,
+        file_key: StorageKey,
+        ocr_engine: BaseOCREngine,
+        storage: StorageBackend | None = None,
+        work_dir: Path | None = None,
+        output_prefix: str = "temp",  # where to put subdocs + outputs within the storage
+    ):
+        self.file_key = file_key
+        self.ocr_engine = ocr_engine
+        self.storage = storage or LocalStorage()
+        self.output_prefix = output_prefix
+
+        self.work_dir = work_dir or Path(tempfile.mkdtemp(prefix="invoice_work_"))
+        self.work_dir.mkdir(parents=True, exist_ok=True)
+
+        # Materialize the source document locally for fitz/PIL/OCR tooling
+        self.local_input_path = self.storage.materialize_to_local(file_key)
+
+        self.markdown = ""
+        self.markdown_by_page: dict[int, str] = {}
+        self.markdown_with_pages_numbers = ""
+        self.extraction_dict = {}
+        self.analysis_dict = {}
+        self.subdocuments: list[SubdocumentArtifact] = []
+
+        self.file_type = "pdf" if self.local_input_path.suffix.lower() == ".pdf" else "image"
+
+        if self.file_type == "pdf":
+            with fitz.open(self.local_input_path) as doc:
+                self.page_number = len(doc)
         else:
-            selected_image = st.selectbox(
-                "Choose an image file:",
-                options=image_files,
-                index=0,
-                key="image_selector"
+            self.page_number = 1
+
+        # A nice stable stem for output naming
+        self.stem = self.local_input_path.stem
+
+    def extract_markdown(self):
+        markdown, markdown_by_page = self.ocr_engine.extract_text(self)
+        self.markdown = markdown
+        self.markdown_by_page = markdown_by_page
+        self.markdown_with_pages_numbers = "\n\n---\n\n".join(
+            [f"--- PAGE {page} ---\n: {txt}" for page, txt in markdown_by_page.items()]
+        )
+
+    def analyze_document(self):
+        prompt = build_prompt_for_analyze_document(
+            config_path="configs/extraction_config.json",
+            markdown_text=self.markdown_with_pages_numbers,
+        )
+
+        client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
+        response = client.chat.completions.create(
+            model="gpt-4o",
+            messages=[{"role": "user", "content": prompt}],
+            temperature=0,
+        )
+        self.analysis_dict = extract_json_from_response(response.choices[0].message.content)
+
+    def _subdoc_key(self, ext: str, document_number: int) -> str:
+        # returns a relative key under output_prefix; LocalStorage will resolve it, S3 will use it as part of s3://...
+        return f"{self.output_prefix}/{self.stem}_subdocument_{document_number}{ext}"
+
+    def split_document_into_invoices(self):
+        if self.file_type != "pdf":
+            raise ValueError("split_document_into_invoices currently expects a PDF input.")
+
+        with fitz.open(self.local_input_path) as doc:
+            for doc_num_str, page_numbers in self.analysis_dict["invoice_pages"].items():
+                document_number = int(doc_num_str) if isinstance(doc_num_str, str) and doc_num_str.isdigit() else int(doc_num_str)
+
+                sub_md = "\n\n".join([self.markdown_by_page[p] for p in page_numbers])
+
+                md_key = self._subdoc_key(".md", document_number)
+                pdf_key = self._subdoc_key(".pdf", document_number)
+                img_key = self._subdoc_key(".png", document_number)
+
+                # 1) write markdown to storage
+                self.storage.write_text(md_key, sub_md)
+
+                # 2) create sub-pdf locally, then upload/store
+                subdoc_pdf_local = self.work_dir / Path(pdf_key).name
+                subdoc = fitz.open()
+                subdoc.insert_pdf(doc, from_page=page_numbers[0] - 1, to_page=page_numbers[-1] - 1)
+                subdoc.save(subdoc_pdf_local)
+                subdoc.close()
+
+                self.storage.write_bytes(pdf_key, subdoc_pdf_local.read_bytes(), content_type="application/pdf")
+
+                # 3) render pages into one concatenated image locally, then upload/store
+                page_images: list[Image.Image] = []
+                with fitz.open(subdoc_pdf_local) as subpdf:
+                    for page in subpdf:
+                        pix = page.get_pixmap(dpi=300)
+                        mode = "RGB" if pix.alpha == 0 else "RGBA"
+                        pil_image = Image.frombytes(mode, [pix.width, pix.height], pix.samples)
+                        page_images.append(pil_image)
+
+                total_height = sum(img.height for img in page_images)
+                max_width = max(img.width for img in page_images)
+                concatenated = Image.new("RGB", (max_width, total_height), color=(255, 255, 255))
+                y = 0
+                for img in page_images:
+                    concatenated.paste(img, (0, y))
+                    y += img.height
+
+                subdoc_img_local = self.work_dir / Path(img_key).name
+                concatenated.save(subdoc_img_local)
+
+                self.storage.write_bytes(img_key, subdoc_img_local.read_bytes(), content_type="image/png")
+
+                self.subdocuments.append(
+                    SubdocumentArtifact(
+                        document_number=document_number,
+                        page_numbers=page_numbers,
+                        markdown=sub_md,
+                        md_key=md_key,
+                        pdf_key=pdf_key,
+                        image_key=img_key,
+                    )
+                )
+
+    def extract_data_from_subdocuments(self, processor):
+        extraction_dicts = []
+        extraction_result_json = {"number_of_subdocuments": len(self.subdocuments)}
+
+        for subdoc in self.subdocuments:
+            # processor.extract expects a local filename -> materialize image to local
+            local_image = self.storage.materialize_to_local(subdoc.image_key)
+
+            extraction_dict = processor.extract(
+                str(local_image),
+                use_ocr=True,
+                use_vision=True,
+                markdown_text=subdoc.markdown,
+                prompt=get_full_prompt(
+                    ocr_text=subdoc.markdown,
+                    animal_information=self.analysis_dict.get("animals"),
+                ),
+                animal_information=self.analysis_dict.get("animals"),
             )
-    
-    with col2:
-        st.subheader("📄 Select JSON")
-        json_dir = "3C_testdaten_json"
-        json_files = get_file_list(json_dir, "json")
-        
-        if not json_files:
-            st.warning(f"No JSON files found in {json_dir}")
-            selected_json = None
-        else:
-            selected_json = st.selectbox(
-                "Choose a JSON file:",
-                options=json_files,
-                index=0,
-                key="json_selector"
-            )
-    
-    st.markdown("---")
-    
-    # Display content in two columns
-    if selected_image or selected_json:
-        col_left, col_right = st.columns(2)
-        
-        with col_left:
-            st.subheader("📷 Input Image")
-            if selected_image:
-                image_path = os.path.join(image_dir, selected_image)
-                try:
-                    image = Image.open(image_path)
-                    st.image(image, caption=selected_image, width='stretch')
-                except Exception as e:
-                    st.error(f"Error loading image: {str(e)}")
-            else:
-                st.info("No image selected")
-        
-        with col_right:
-            st.subheader("📄 Extracted Data")
-            if selected_json:
-                json_path = os.path.join(json_dir, selected_json)
-                json_data = load_json_file(json_path)
-                if json_data:
-                    st.json(json_data)
-                else:
-                    st.error("Failed to load JSON data")
-            else:
-                st.info("No JSON selected")
-    
-    else:
-        st.info("Please select both an image and a JSON file to view the extraction results.")
-    
-    # Footer with file counts
-    st.markdown("---")
-    col1, col2, col3 = st.columns(3)
-    
-    with col1:
-        st.metric("Images Available", len(image_files))
-    
-    with col2:
-        st.metric("JSON Files Available", len(json_files))
-    
-    with col3:
-        if selected_image and selected_json:
-            st.success("✅ Both files selected")
-        else:
-            st.warning("⚠️ Select files to view")
+            extraction_dicts.append(extraction_dict)
 
-if __name__ == "__main__":
-    main()
+        extraction_result_json["subdocuments"] = extraction_dicts
+        self.extraction_result_json = extraction_result_json
+
+        # store output JSON via storage too
+        out_key = f"{self.output_prefix}/extracted_data_{self.stem}.json"
+        self.storage.write_text(out_key, json.dumps(extraction_result_json, indent=4))
+
+    def cleanup_temporary_files(self):
+        # delete subdocument artifacts from storage (optional; comment out if you want to keep them)
+        for subdoc in self.subdocuments:
+            self.storage.delete(subdoc.md_key)
+            self.storage.delete(subdoc.pdf_key)
+            self.storage.delete(subdoc.image_key)
+
+        # always delete local working files
+        try:
+            for p in self.work_dir.glob("*"):
+                if p.is_file():
+                    p.unlink()
+            self.work_dir.rmdir()
+        except Exception:
+            pass

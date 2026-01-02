@@ -6,5 +6,11 @@ router = APIRouter()
 @router.post("/upload")
 async def upload(file: UploadFile = File(...)):
     file_bytes = await file.read()
-    file_id = save_upload(file_bytes)
+
+    file_id = save_upload(
+        file_bytes,
+        original_filename=file.filename,
+        content_type=file.content_type,
+    )
+
     return {"file_id": file_id}

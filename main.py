@@ -26,12 +26,21 @@ file_path = input_folder + file
 agentic_ocr_engine = OCRAgenticProcessor(name = "agentic_ocr")
 # mistral_ocr_engine = MistralOCR()
 
-invoice = Invoice(filename=Path(file_path), ocr_engine=agentic_ocr_engine)
+from storage.storage import S3Storage
 
-invoice.extract_markdown()
-invoice.analyze_document()
-print(invoice.analysis_dict)
-invoice.split_document_into_invoices()
+storage = S3Storage(region_name="eu-central-1")
+
+inv = Invoice(
+    file_key="s3://3c-vetcostcheck/230041495V_Splitt.pdf",
+    ocr_engine=agentic_ocr_engine,
+    storage=storage,
+    output_prefix="s3://3c-vetcostcheck/processed/"  # see note below
+)
+
+inv.extract_markdown()
+inv.analyze_document()
+print(inv.analysis_dict)
+inv.split_document_into_invoices()
 
 # initialize GPT processor
 processor = GPTInvoiceProcessor(
@@ -41,6 +50,6 @@ processor = GPTInvoiceProcessor(
     vision_model="gpt-4o"  # or "gpt-4.1", or whatever OpenAI supports for vision in your account
 )
 
-invoice.extract_data_from_subdocuments(processor)
-print(invoice.extraction_result_json)
-print(type(invoice.extraction_result_json))
+inv.extract_data_from_subdocuments(processor)
+print(inv.extraction_result_json)
+print(type(inv.extraction_result_json))
