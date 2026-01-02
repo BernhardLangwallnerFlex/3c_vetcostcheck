@@ -1,24 +1,39 @@
+import os
 from fastapi import APIRouter
 from redis import Redis
 from rq.job import Job
-from config import REDIS_URL
+from rq.exceptions import NoSuchJobError
+
 from api.models import JobStatusResponse
 
-
 router = APIRouter()
-redis_conn = Redis.from_url(REDIS_URL)
+
+
+def get_redis_conn() -> Redis:
+    return Redis.from_url(os.environ["REDIS_URL"])
+
 
 @router.get("/job/{job_id}", response_model=JobStatusResponse)
 async def get_job(job_id: str):
+    redis_conn = get_redis_conn()
+
     try:
         job = Job.fetch(job_id, connection=redis_conn)
-    except:
+    except NoSuchJobError:
         return {"job_id": job_id, "status": "not_found", "result": None}
 
-    if job.is_finished:
+    status = job.get_status()  # 'queued', 'started', 'finished', 'failed', etc.
+
+    if status == "finished":
         return {"job_id": job_id, "status": "finished", "result": job.result}
 
-    if job.is_failed:
-        return {"job_id": job_id, "status": "failed", "error": str(job.exc_info)}
+    if status == "failed":
+        # keep it short; full traceback is in Redis and logs
+        err = None
+        if job.exc_info:
+            # first line usually contains the exception type/message
+            err = job.exc_info.splitlines()[-1]
+        return {"job_id": job_id, "status": "failed", "error": err}
 
-    return {"job_id": job_id, "status": job.get_status()}
+    # queued / started / deferred / scheduled
+    return {"job_id": job_id, "status": status, "result": None}

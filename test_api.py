@@ -5,8 +5,10 @@ import os
 from dotenv import load_dotenv
 load_dotenv()
 
-API_BASE = "http://localhost:8000"
+#API_BASE = "http://localhost:8000"
+API_BASE = "https://invoice-api-iujy.onrender.com/"
 API_KEY = os.getenv("INVOICE_API_KEY", "changeme123")
+API_KEY = "changeme123"
 print(API_KEY)
 
 HEADERS = {

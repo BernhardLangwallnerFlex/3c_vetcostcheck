@@ -20,7 +20,7 @@ def get_queue() -> Queue:
 @router.post("/process")
 async def process_document(req: ProcessRequest):
     queue = get_queue()
-    job = queue.enqueue(process_file, req.file_id)
+    job = queue.enqueue(process_file, req.file_id, job_timeout=3600,result_ttl=3600,failure_ttl=3600)  # 1 hour timeout
 
     return {
         "job_id": job.get_id(),
