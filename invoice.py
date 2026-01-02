@@ -9,7 +9,7 @@ import fitz
 from PIL import Image
 from dotenv import load_dotenv
 from openai import OpenAI
-
+import shutil
 from ocr.base_ocr import BaseOCREngine
 from utils import extract_json_from_response
 from prompt_building.prompt_building import build_prompt_for_analyze_document, get_full_prompt
@@ -195,5 +195,11 @@ class Invoice:
                 if p.is_file():
                     p.unlink()
             self.work_dir.rmdir()
+        except Exception:
+            pass
+    
+    def cleanup_local(self):
+        try:
+            shutil.rmtree(self.work_dir, ignore_errors=True)
         except Exception:
             pass
