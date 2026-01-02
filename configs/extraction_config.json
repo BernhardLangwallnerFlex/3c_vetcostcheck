@@ -1,0 +1,177 @@
+{
+  "extraction_fields": {
+    "type": {
+      "description": "Der Typ der Rechnung oder Quittung.",
+      "type": "str"
+    },    
+    "currency": {
+      "description": "Die Währung der Rechnung oder Quittung (EUR, USD, GBP, etc.).",
+      "type": "str"
+    },
+    "Number": {
+      "description": "Die eindeutige Nummer der Rechnung oder Quittung.",
+      "type": "str"
+    },
+    "issuedAt": {
+      "description": "Das Datum der Rechnung oder Quittung im Format DD.MM.YYYY.",
+      "type": "str"
+    },
+    "sender.practiceName": {
+      "description": "Name der Arztpraxis oder Physiotherapeutenpraxis.",
+      "type": "str"
+    },
+    "sender.contactName": {
+      "description": "Name des behandelnden Arztes oder der behandelnden Arztin.",
+      "type": "str"
+    },
+    "sender.address": {
+      "description": "Straße und Hausnummer der Firma oder Arztpraxis.",
+      "type": "str"
+    },
+    "sender.postcode": {
+      "description": "Postleitzahl der Firma oder Arztpraxis.",
+      "type": "str"
+    },
+    "sender.city": {
+      "description": "Ort der Firma oder Arztpraxis.",
+      "type": "str"
+    },
+    "sender.country": {
+      "description": "Land der Firma oder Arztpraxis.",
+      "type": "str"
+    },
+    "sender.contactPhone": {
+      "description": "Telefonnummer der Firma oder Arztpraxis.",
+      "type": "str"
+    },
+    "sender.contactMail": {
+      "description": "E-Mail-Adresse der Firma oder Arztpraxis.",
+      "type": "str"
+    },
+    "sender.vatId": {
+      "description": "Die Umsatzsteuer-Identifikationsnummer der Firma oder Arztpraxis.",
+      "type": "str"
+    },
+    "payment.bank": {
+      "description": "Die Bank der Firma oder Arztpraxis.",
+      "type": "str"
+    },
+    "payment.iban": {
+      "description": "Die IBAN der Firma oder Arztpraxis.",
+      "type": "str"
+    },
+    "payment.bic": {
+      "description": "Die BIC der Bank der Firma oder Arztpraxis.",
+      "type": "str"
+    },
+    "recipient.companyName": {
+      "description": "Der Name der Firma des Kunden, falls vorhanden.",
+      "type": "str"
+    },
+    "recipient.contactFirstname": {
+      "description": "Vorname des Kunden oder Tierbesitzers, falls vorhanden. Falls kein Vorname, dann leer.",
+      "type": "str"
+    },
+    "recipient.contactName": {
+      "description": "Nachname des Kunden oder Tierbesitzers.",
+      "type": "str"
+    },
+    "recipient.address": {
+      "description": "Straße und Hausnummer des Kunden, falls vorhanden.",
+      "type": "str"
+    },
+    "recipient.postcode": {
+      "description": "Postleitzahl des Kunden, falls vorhanden.",
+      "type": "str"
+    },
+    "recipient.city": {
+      "description": "Ort des Kunden, falls vorhanden.",
+      "type": "str"
+    },
+    "recipient.contactPhone": {
+      "description": "Telefonnummer des Kunden, falls vorhanden.",
+      "type": "str"
+    },
+    "recipient.contactMail": {
+      "description": "E-Mail-Adresse des Kunden, falls vorhanden.",
+      "type": "str"
+    },
+    "items.1.name": {
+      "description": "Bezeichnung der ersten Leistung (Medikament, Untersuchung, Behandlung, etc.) in der Rechnung oder Quittung.",
+      "type": "str"
+    },
+    "items.1.got": {
+      "description": "Die GOT-Nummer der ersten Leistung, falls vorhanden. GOT-Nummern sind ein- bis vierstellige Zahlen, oft in Klammern dargestellt. Falls in dem Format 'GOT 1234' angegeben, dann nur die Ziffern zurückgeben.",
+      "type": "float"
+    },
+    "items.1.animalName": {
+      "description": "Der Name des Tieres ohne Tierart, das in Bezug auf die erste Leistung behandelt wurde (siehe Liste der Tiere weiter oben).",
+      "type": "str"
+    },
+    "items.1.qty": {
+      "description": "Die Menge (Anzahl, Stück, Packung, Milliliter, Kilogramm, etc.) der ersten Leistung in der Rechnung oder Quittung.",
+      "type": "float"
+    },
+    "items.1.unit": {
+      "description": "Die Einheit der ersten Leistung in der Rechnung oder Quittung (Stk, kg, ml, etc.).",
+      "type": "str"
+    },
+    "items.1.unitNet": {
+      "description": "Der Nettobetrag der ersten Leistung in der Rechnung oder Quittung.",
+      "type": "float"
+    },
+    "items.2.name": {
+      "description": "Bezeichnung der zweiten Leistung (Medikament, Untersuchung, Behandlung, etc.) in der Rechnung oder Quittung.",
+      "type": "str"
+    },
+    "items.2.got": {
+      "description": "Die GOT-Nummer der zweiten Leistung, falls vorhanden. GOT-Nummern sind ein- bis vierstellige Zahlen, oft in Klammern dargestellt. Falls in dem Format GOT 1234, dann nur die Ziffern zurückgeben.",
+      "type": "float"
+    },
+    "items.2.animalName": {
+      "description": "Der Name des Tieres ohne Tierart, das in dieser Leistung behandelt wurde (siehe Liste der Tiere weiter oben).",
+      "type": "str"
+    },
+    "items.2.qty": {
+      "description": "Die Menge (Anzahl, Stück, Packung, etc.) der zweiten Leistung in der Rechnung oder Quittung.",
+      "type": "float"
+    },
+    "items.2.unit": {
+      "description": "Die Einheit der zweiten Leistung in der Rechnung oder Quittung (Stk, kg, ml, etc.).",
+      "type": "str"
+    },
+    "items.2.unitNet": {
+      "description": "Der Nettobetrag der zweiten Leistung in der Rechnung oder Quittung. Wichtig: Weitere Leistungen in der Tabelle analog Leistung/Item 1 und 2 und entsprechend dieses Formats ebenfalls auslesen und anlegen." ,
+      "type": "float"
+    },  
+    "totals.net": {
+      "description": "Der Nettobetrag der gesamten Rechnung oder Quittung.",
+      "type": "float"
+    },
+    "totals.discount": {
+      "description": "Der Rabattbetrag der Rechnung oder Quittung, falls vorhanden.",
+      "type": "float"
+    },
+    "totals.gross": {
+      "description": "Der Gesamtbetrag oder Bruttobetrag der Rechnung oder Quittung.",
+      "type": "float"
+    },
+    "totals.tax.rate": {
+      "description": "Der MwSt.-Satz der Rechnung oder Quittung, falls vorhanden.",
+      "type": "float"
+    },
+    "totals.tax.amount": {
+      "description": "Der MwSt.-Betrag der Rechnung oder Quittung.",
+      "type": "float"
+    }
+  },
+  "prompt_template": {
+    "header": "Du bist ein Experte für die Analyse von Verschreibungen und Rechnungen im Bereich Tierarzt und Tier-Physiotherapie.\n\nAus folgender Rechnung sollen Informationen ausgelesen werden. Gib das Ergebnis als JSON-Objekt zurück. Diese Aufgabe erfordert genaues Arbeiten.\n",
+    "image_part": "Die Rechnung ist auch als Bild angehängt, damit du die Informationen auch visuell überprüfen kannst.",
+    "ocr_text": "Die folgenden Informationen zwischen Doppel-Pipes (||) wurden aus der Rechnung per OCR ausgelesen:\n\n|| {ocr_text} ||\n\nBeachte, dass die Informationen aus der Rechnung per OCR ausgelesen wurden und daher nicht immer vollständig oder korrekt sind. Überprüfe daher die Informationen und korrigiere sie gegebenenfalls. Beachte ebenfalls, dass die Informationen zu einzelnen Leistungen (wie Medikamente, Untersuchungen, Behandlungen,etc.) oft in Tabellenform angegeben sind. Für jede Zeile in der Tabelle, die eine Leistung darstellt, sollen unter 'items.k.name', 'items.k.got', 'items.k.animalName', 'items.k.qty', 'items.k.unit', 'items.k.unitNet' (k=1,2,3,...) die Information ausgelesen werden. In dem Schema weiter unten sind beispielhaft nur 2 Leistungen angegeben. Die Zeilen, die erbrachte Leistungen darstellen, haben meistens eine Mengenangabe (in Stück, ml, kg, etc.) und einen Nettobetrag. Teilweise sind die Tabellen im OCR-Ergebnis aufgeteilt, weil sie von mehreren Seiten des Dokuments stammen. Achte daher besonders darauf alle Zeilen innerhalb von Tabellen genau zu analysieren und zu extrahieren.\n",
+    "footer": "Das Ergebnis soll im json-Format zurückgegeben werden. Dabei sollen die json-Keys exakt den Namen der Felder in der Feld-Definition oben entsprechen.\n",
+    "animals_section": "Die folgenden Tiere werden in der Rechnung oder Quittung erwähnt: {animals_string}. Diese Information ist wichtig für die Extrahierung der Leistungen auf der Rechnung oder Quittung.\n",
+    "field_format": "- {readable_name}: {description}"
+  },
+  "analysis_prompt": "Du bist ein Experte für die Analyse von Verschreibungen und Rechnungen im Bereich Tierarzt und Tier-Physiotherapie.\n\nDu bekommst unten ein Dokument im Markdown-Format mit Seitennummern (Beispiel '--- PAGE 1 --- ...'), das eine oder mehrere Rechnungen enthalten soll. Manche Dokumente enthalten mehrere Seiten, die zu einer Rechnung gehören, andere Dokumente enthalten nur eine Rechnung, deren Information auf mehrere Seiten aufgeteilt ist. Ggf. kann ein Dokument auch unbrauchbar sein.\n\nDeine Aufgabe ist es, das Dokument zu analysieren und folgende Fragen zu beantworten. Die Antworten sollen konsolidiert und im JSON-Format zurückgegeben werden.\n Frage 1: Welche Seiten enthalten nützliche Informationen zu einer Verschreibung oder Rechnung? Output: 'pages_with_invoice_information': <list of page numbers>, z.B. [1,2,4,5]. Beachte: Seitenzahlen starten bei 1. \nFrage 2: Wie viele unabhängige Rechnungen enthält das Dokument? Ouput: 'number_of_invoices': <number>.\nFrage 3: Welche Seiten gehören zu welcher Rechnung? Output: 'invoice_pages': <invoice_number>: <list of page numbers>, ... \nFrage 4: Wie viele Leistungen (z.B. Behandlungen oder Medikamente, die abgerechnet werden) befinden sich auf jeder Rechnung (meist sind das Zeilen in einer Tabelle)? Output: 'invoice_number_of_items': <invoice_number>: <number of items on invoice>, ...\nFrage 5: Welche Tiere werden genannt und welcher Spezies (z.B. Hund, Katze, etc.) bzw. Rasse (z.B. Labrador, Bulldog, etc.) gehören sie an? Dazu noch Informationen wie Geburtsdatum, Geschlecht, Chip-ID, Diagnose, etc. so weit vorhanden. Output als Liste von Dictionaries: 'animals': [{{'name': str, 'species': str, 'breed': str, 'birthDate': str, 'gender': str, 'chipId': str, 'diagnosis': str}}, {{'name': str,...}},...] und so weiter, falls es mehrere Tiere gibt.\n\n Hier ist das Dokument im Markdown-Format: {markdown_text} "
+}
