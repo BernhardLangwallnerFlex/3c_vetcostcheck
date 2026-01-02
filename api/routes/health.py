@@ -1,7 +1,7 @@
-from fastapi import FastAPI
+from fastapi import APIRouter
 
-app = FastAPI()
+router = APIRouter()
 
-@app.get("/healthz")
+@router.get("/healthz")
 def healthz():
-    return {"ok": True}
+    return {"status": "ok"}

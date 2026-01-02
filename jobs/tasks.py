@@ -1,26 +1,64 @@
-from storage.file_storage import get_file_path
-from pathlib import Path
 import os
-from processors.gpt_processor import GPTInvoiceProcessor
-from ocr.ocr_agentic import OCRAgenticProcessor
-from invoice import Invoice
+from pathlib import Path
 from dotenv import load_dotenv
+
+from storage.file_storage import get_file_key  # <-- NEW (was get_file_path)
+
+from storage.storage import LocalStorage, S3Storage  # adjust import to your actual module names
+from invoice import Invoice
+
+from ocr.ocr_agentic import OCRAgenticProcessor
+from processors.gpt_processor import GPTInvoiceProcessor
 from utils import ensure_json_serializable
+
 load_dotenv()
 
+
+def _build_storage():
+    """
+    Decide storage backend from env. Keep it dead simple:
+    STORAGE_BACKEND=local|s3
+    """
+    backend = os.getenv("STORAGE_BACKEND", "local").lower()
+
+    if backend == "s3":
+        region = os.getenv("AWS_DEFAULT_REGION", "eu-central-1")
+        return S3Storage(region_name=region)
+
+    # default: local
+    base_dir = Path(os.getenv("LOCAL_STORAGE_BASE_DIR", Path.cwd()))
+    return LocalStorage(base_dir=base_dir)
+
+
 def process_file(file_id: str):
-    file_path = get_file_path(file_id)
+    # 1) Resolve file_id -> storage key (local path or s3://...)
+    file_key = get_file_key(file_id)
 
-    agentic_ocr_engine = OCRAgenticProcessor(name = "agentic_ocr")
+    # 2) Build storage backend
+    storage = _build_storage()
 
-    invoice = Invoice(filename=Path(file_path), ocr_engine=agentic_ocr_engine)
+    # 3) Engines / processors
+    agentic_ocr_engine = OCRAgenticProcessor(name="agentic_ocr")
 
-    # initialize GPT processor and extract data from subdocuments
     processor = GPTInvoiceProcessor(
         name="gpt_processor",
         api_key=os.getenv("OPENAI_API_KEY"),
-        model="gpt-4",
-        vision_model="gpt-4o"  # or "gpt-4.1", or whatever OpenAI supports for vision in your account
+        model=os.getenv("OPENAI_TEXT_MODEL", "gpt-4"),
+        vision_model=os.getenv("OPENAI_VISION_MODEL", "gpt-4o"),
+    )
+
+    # 4) Output prefix (local folder or s3 prefix)
+    #    Examples:
+    #      local: output_prefix="outputs"
+    #      s3:    output_prefix="s3://my-bucket/processed/invoices"
+    output_prefix = os.getenv("OUTPUT_PREFIX", "outputs")
+
+    # 5) Run pipeline
+    invoice = Invoice(
+        file_key=file_key,
+        ocr_engine=agentic_ocr_engine,
+        storage=storage,
+        output_prefix=output_prefix,
     )
 
     invoice.extract_markdown()
@@ -28,16 +66,7 @@ def process_file(file_id: str):
     invoice.split_document_into_invoices()
     invoice.extract_data_from_subdocuments(processor)
 
+    # (optional) keep artifacts in S3 but remove local temps
+    # invoice.cleanup_temporary_files()  # enable if desired
+
     return ensure_json_serializable(invoice.extraction_result_json)
-
-"""
-    # Load your central class
-    invoice = InvoiceDocument(file_path)
-
-    # Your existing pipeline – adapt to your class
-    invoice.load()
-    invoice.split()
-    invoice.run_pipeline()   # OCR + LLM stages
-    invoice.cleanup()
-
-    return invoice.to_dict()   # whatever your final JSON output is"""

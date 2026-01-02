@@ -2,6 +2,8 @@ import time
 import requests
 import json
 import os
+from dotenv import load_dotenv
+load_dotenv()
 
 API_BASE = "http://localhost:8000"
 API_KEY = os.getenv("INVOICE_API_KEY", "changeme123")
