@@ -1,8 +1,11 @@
 import time
 import requests
+import json
+import os
 
 API_BASE = "http://localhost:8000"
-API_KEY = "changeme123"   # replace if needed
+API_KEY = os.getenv("INVOICE_API_KEY", "changeme123")
+print(API_KEY)
 
 HEADERS = {
     "X-API-Key": API_KEY
